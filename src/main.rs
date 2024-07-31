@@ -60,17 +60,19 @@ impl Spring {
 
 #[macroquad::main("Cloth Simulation 3D")]
 async fn main() {
-    let rows = 10;
-    let cols = 10;
+    let rows = 15;
+    let cols = 15;
     let spacing = 2.0;
-    let stiffness = 300.0;
+    let stiffness = 100.0;
     let rest_length = spacing;
-    let mass_value = 1.0;
-    let dt = 0.03;
+    let mass_value = 0.5;
+    let dt = 0.01;
     let damping = 0.3;
     
     let mut masses: Vec<Mass> = Vec::new();
-    let mut springs: Vec<Spring> = Vec::new();
+    let mut structural_springs: Vec<Spring> = Vec::new();
+    let mut shear_springs: Vec<Spring> = Vec::new();
+    let mut bend_springs: Vec<Spring> = Vec::new();
 
     // Init masses
     for i in 0..rows {
@@ -88,19 +90,70 @@ async fn main() {
         for j in 0..cols {
             let index = i * cols + j;
 
+            // Structural springs
             if j < cols - 1 {
-                springs.push(Spring::new(index, index + 1, rest_length, stiffness));
+                structural_springs.push(Spring::new(index, index + 1, rest_length, stiffness));
+            }
+
+            if j > 0 {
+                structural_springs.push(Spring::new(index, index - 1, rest_length, stiffness));
+            }
+
+            if i > 0 {
+                structural_springs.push(Spring::new(index, index - cols, rest_length, stiffness));
             }
 
             if i < rows - 1 {
-                springs.push(Spring::new(index, index + cols, rest_length, stiffness));
+                structural_springs.push(Spring::new(index, index + cols, rest_length, stiffness));
             }
+
+            // Shear springs
+            let shear_rest_length = (2.0 * rest_length * rest_length).sqrt();
+            if j > 0 && i > 0 {
+                shear_springs.push(Spring::new(index, index - cols - 1, shear_rest_length, stiffness));
+            }
+
+            if j < cols - 1 && i > 0 {
+                shear_springs.push(Spring::new(index, index - cols + 1, shear_rest_length, stiffness));
+            }
+
+            if j > 0 && i < rows - 1 {
+                shear_springs.push(Spring::new(index, index + cols - 1, shear_rest_length, stiffness));
+            }
+
+            if j < cols - 1 && i < cols - 1 {
+                shear_springs.push(Spring::new(index, index + cols + 1, shear_rest_length, stiffness));
+            }
+
+            // Bend springs
+            let bend_rest_length = rest_length * 2.0;
+            if i > 1 {
+                bend_springs.push(Spring::new(index, index - 2 * cols, bend_rest_length, stiffness));
+            }
+
+            if j < cols - 2 {
+                bend_springs.push(Spring::new(index, index + 2, bend_rest_length, stiffness));
+            }
+
+            if i < rows - 2 {
+                bend_springs.push(Spring::new(index, index + 2 * cols, bend_rest_length, stiffness));
+            }
+
+            if j > 1 {
+                bend_springs.push(Spring::new(index, index - 2, bend_rest_length, stiffness));
+            }
+
+
         }
     }
 
     loop {
         // Update simulation
-        for spring in &springs {
+        for spring in &structural_springs {
+            spring.apply_force(&mut masses);
+        }
+
+        for spring in &shear_springs {
             spring.apply_force(&mut masses);
         }
 
@@ -121,7 +174,7 @@ async fn main() {
             ..Default::default()
         });
 
-        for spring in &springs {
+        for spring in &structural_springs {
             let a = masses[spring.a].position;
             let b = masses[spring.b].position;
             draw_line_3d(a.into(), b.into(), WHITE);
