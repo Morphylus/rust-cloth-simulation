@@ -2,16 +2,20 @@
 pub struct Vec3 {
     pub x: f64,
     pub y: f64,
-    pub z: f64
+    pub z: f64,
 }
 
 impl Vec3 {
     pub fn new(x: f64, y: f64, z: f64) -> Self {
-        Vec3 {x, y, z}
+        Vec3 { x, y, z }
     }
 
-    pub fn ZERO() -> Self {
-        Vec3 { x: 0.0, y: 0.0, z: 0.0 }
+    pub fn zero() -> Self {
+        Vec3 {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        }
     }
 
     pub fn length(&self) -> f64 {
@@ -21,19 +25,24 @@ impl Vec3 {
     pub fn normalize(&self) -> Self {
         let len = self.length();
 
-        if len >0.0 {
+        if len > 0.0 {
             Vec3 {
                 x: self.x / len,
                 y: self.y / len,
-                z: self.z / len
+                z: self.z / len,
             }
         } else {
-            Vec3::ZERO()
+            Vec3::zero()
         }
+    }
+
+    pub fn dot(&self, other: Vec3) -> f64 {
+        self.x * other.x + self.y * other.y + self.z * other.z
     }
 }
 
-use std::ops::{Add, Sub, Mul, Div, Neg};
+use core::iter::Sum;
+use std::ops::{Add, Div, Mul, Neg, Sub};
 
 impl Add for Vec3 {
     type Output = Vec3;
@@ -42,8 +51,14 @@ impl Add for Vec3 {
         Vec3 {
             x: self.x + rhs.x,
             y: self.y + rhs.y,
-            z: self.z + rhs.z
+            z: self.z + rhs.z,
         }
+    }
+}
+
+impl Sum for Vec3 {
+    fn sum<I: Iterator<Item = Vec3>>(iter: I) -> Vec3 {
+        iter.fold(Vec3::zero(), |acc, vec| acc + vec)
     }
 }
 
@@ -61,12 +76,12 @@ impl Sub for Vec3 {
 
 impl Neg for Vec3 {
     type Output = Self;
-    
+
     fn neg(self) -> Self::Output {
         Vec3 {
             x: -self.x,
             y: -self.y,
-            z: -self.z
+            z: -self.z,
         }
     }
 }
@@ -90,7 +105,7 @@ impl Mul<Vec3> for f64 {
         Vec3 {
             x: self * rhs.x,
             y: self * rhs.y,
-            z: self * rhs.z
+            z: self * rhs.z,
         }
     }
 }

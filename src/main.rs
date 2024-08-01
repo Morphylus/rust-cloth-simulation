@@ -12,7 +12,7 @@ struct Mass {
 
 impl Mass {
     fn new(position: Vec3, pinned: bool) -> Self {
-        Mass { position: position, velocity: Vec3::ZERO(), acceleration: Vec3::ZERO(), pinned: pinned}
+        Mass { position: position, velocity: Vec3::zero(), acceleration: Vec3::zero(), pinned: pinned}
     }
 
     fn apply_force(&mut self, force: Vec3) {
@@ -26,7 +26,7 @@ impl Mass {
             let new_acc = self.acceleration / mass;
             self.velocity = self.velocity + new_acc * dt;
             self.position = self.position + self.velocity * dt;
-            self.acceleration = Vec3::ZERO();
+            self.acceleration = Vec3::zero();
         }
     }
 }
@@ -68,6 +68,8 @@ async fn main() {
     let mass_value = 0.5;
     let dt = 0.01;
     let damping = 0.3;
+    let wind = Vec3::new(-1.0, 0.0, -1.0);
+    let wind_speed = 5.0;
     
     let mut masses: Vec<Mass> = Vec::new();
     let mut structural_springs: Vec<Spring> = Vec::new();
@@ -78,7 +80,7 @@ async fn main() {
     for i in 0..rows {
         for j in 0..cols {
             let mut new_point = Mass::new(Vec3::new(j as f64 * spacing, 0.0, i as f64 * spacing), false);
-            if (i == 0 && j == 0) || (i == rows-1 && j == 0) {
+            if i == 0 && j == 0 {
                 new_point.pinned = true;
             }
             masses.push(new_point);
@@ -156,10 +158,39 @@ async fn main() {
         for spring in &shear_springs {
             spring.apply_force(&mut masses);
         }
+        
+        let positions: Vec<Vec3> = masses.iter().map(|mass| mass.position).collect();
 
-        for mass in &mut masses {
+        for (index, mass) in masses.iter_mut().enumerate() {
             mass.apply_force(Vec3::new(0.0, -9.81, 0.0)); // gravity
             mass.apply_force(-damping * mass.velocity); // Damping
+
+            let mut surrounding_positions: Vec<Vec3> = Vec::new();
+            let i = index / cols;
+            let j = index % cols;
+
+            // Structural springs
+
+            if i < rows - 1 {
+                surrounding_positions.push(positions[index + cols]);
+            }
+
+            if j < cols - 1 {
+                surrounding_positions.push(positions[index + 1]);
+            }
+
+            if i > 0 {
+                surrounding_positions.push(positions[index - cols]);
+            }
+
+            if j > 0 {
+                surrounding_positions.push(positions[index - 1]);
+            }
+
+            let vertex_normal = calculate_vertex_normal(&mass.position, &surrounding_positions);
+
+            mass.apply_force(wind_speed * vertex_normal.dot(wind - mass.velocity) * vertex_normal);
+
             mass.update(dt, mass_value);
         }
 
@@ -167,7 +198,7 @@ async fn main() {
         clear_background(BLACK);
 
         set_camera(&Camera3D {
-            position: vec3(60.0, -50.0, 0.0),
+            position: vec3(50.0, 50.0, 50.0),
             target: vec3(0.0, 0.0, 0.0),
             up: vec3(0.0, 1.0, 0.0),
             fovy: 45.0,
@@ -184,6 +215,14 @@ async fn main() {
             draw_sphere(mass.position.into(), 0.1, None, RED);
         }
 
+        let x_vec = Vec3::new(10.0, 0.0, 0.0);
+        let y_vec = Vec3::new(0.0, 10.0, 0.0);
+        let z_vec = Vec3::new(0.01, 0.0, 10.0);
+
+        draw_line_3d(Vec3::zero().into(), x_vec.into(), RED);
+        draw_line_3d(Vec3::zero().into(), y_vec.into(), GREEN);
+        draw_line_3d(Vec3::zero().into(), z_vec.into(), BLUE);
+
         set_default_camera();
 
         next_frame().await;
@@ -194,4 +233,26 @@ impl Into<macroquad::prelude::Vec3> for Vec3 {
     fn into(self) -> macroquad::prelude::Vec3 {
         macroquad::prelude::Vec3::new(self.x as f32, self.y as f32, self.z as f32)
     }
+}
+
+fn calculate_vertex_normal(center: &Vec3, surrounding_positions: &Vec<Vec3>) -> Vec3 {
+    let mut triangle_normals = Vec::new();
+    let length = surrounding_positions.len();
+    for i in 0..length {
+        let neighbors = (surrounding_positions[i], surrounding_positions[(i + 1) % length]);
+        triangle_normals.push(calculate_triangle_normal(*center, neighbors.0, neighbors.1));
+    }
+
+    let mut res = Vec3::zero();
+    for normal in triangle_normals {
+        res = res + normal;
+    }
+    res / length as f64
+}
+
+fn calculate_triangle_normal(p1: Vec3, p2: Vec3, p3: Vec3) -> Vec3 {
+    let u = p2 - p1;
+    let v = p3 - p1;
+
+    Vec3::new(u.y * v.z - u.z * v.y, u.z * v.x - u.x * v.z, u.x * v.y - u.y * v.x)
 }
