@@ -1,12 +1,12 @@
 #[derive(Debug, Clone, Copy)]
 pub struct Vec3 {
-    pub x: f64,
-    pub y: f64,
-    pub z: f64,
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
 }
 
 impl Vec3 {
-    pub fn new(x: f64, y: f64, z: f64) -> Self {
+    pub fn new(x: f32, y: f32, z: f32) -> Self {
         Vec3 { x, y, z }
     }
 
@@ -18,7 +18,7 @@ impl Vec3 {
         }
     }
 
-    pub fn length(&self) -> f64 {
+    pub fn length(&self) -> f32 {
         (self.x * self.x + self.y * self.y + self.z * self.z).sqrt()
     }
 
@@ -36,7 +36,7 @@ impl Vec3 {
         }
     }
 
-    pub fn dot(&self, other: Vec3) -> f64 {
+    pub fn dot(&self, other: Vec3) -> f32 {
         self.x * other.x + self.y * other.y + self.z * other.z
     }
 }
@@ -86,10 +86,10 @@ impl Neg for Vec3 {
     }
 }
 
-impl Mul<f64> for Vec3 {
+impl Mul<f32> for Vec3 {
     type Output = Self;
 
-    fn mul(self, scalar: f64) -> Self {
+    fn mul(self, scalar: f32) -> Self {
         Vec3 {
             x: self.x * scalar,
             y: self.y * scalar,
@@ -98,7 +98,7 @@ impl Mul<f64> for Vec3 {
     }
 }
 
-impl Mul<Vec3> for f64 {
+impl Mul<Vec3> for f32 {
     type Output = Vec3;
 
     fn mul(self, rhs: Vec3) -> Self::Output {
@@ -110,10 +110,10 @@ impl Mul<Vec3> for f64 {
     }
 }
 
-impl Div<f64> for Vec3 {
+impl Div<f32> for Vec3 {
     type Output = Self;
 
-    fn div(self, scalar: f64) -> Self {
+    fn div(self, scalar: f32) -> Self {
         Vec3 {
             x: self.x / scalar,
             y: self.y / scalar,
