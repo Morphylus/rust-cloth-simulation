@@ -153,14 +153,43 @@ impl Cloth {
         }
     }
 
+    pub fn calculate_normals(&mut self) {
+        for mass in &mut self.masses {
+            mass.normal = Vec3::zero();
+        }
+
+        for i in 0..self.rows - 1 {
+            for j in 0..self.cols - 1 {
+                let idx = i * self.cols + j;
+                let right = idx + 1;
+                let down = idx + self.cols;
+                let down_right = idx + self.cols + 1;
+
+                let v1 = self.masses[right].position - self.masses[idx].position;
+                let v2 = self.masses[down].position - self.masses[idx].position;
+                let normal = v1.cross(&v2).normalize();
+
+                self.masses[idx].normal = self.masses[idx].normal + normal;
+                self.masses[right].normal = self.masses[right].normal + normal;
+                self.masses[down].normal = self.masses[down].normal + normal;
+                self.masses[down_right].normal = self.masses[down_right].normal + normal;
+            }
+        }
+
+        for mass in &mut self.masses {
+            mass.normal = mass.normal.normalize();
+        }
+    }
+
     pub fn update(&mut self, dt: f32, damping: f32, mass_value: f32, wind: Vec3, wind_speed: f32) {
-        self.apply_forces(damping);
+        self.calculate_normals();
+        self.apply_forces(damping, wind, wind_speed);
         for mass in &mut self.masses {
             mass.update(dt, mass_value);
         }
     }
 
-    fn apply_forces(&mut self, damping: f32) {
+    fn apply_forces(&mut self, damping: f32, wind: Vec3, wind_speed: f32) {
         for spring in &self.structural_springs {
             spring.apply_force(&mut self.masses);
         }
@@ -176,6 +205,7 @@ impl Cloth {
         for mass in &mut self.masses {
             mass.apply_force(GRAVITY); // gravity
             mass.apply_force(-damping * mass.velocity); // damping
+            mass.apply_force(wind_speed * mass.normal.dot(&(wind - mass.velocity)) * mass.normal); // Wind
         }
     }
 }
@@ -184,6 +214,7 @@ pub struct Mass {
     pub position: Vec3,
     pub velocity: Vec3,
     pub acceleration: Vec3,
+    pub normal: Vec3,
     pub pinned: bool,
 }
 
@@ -193,6 +224,7 @@ impl Mass {
             position: position,
             velocity: Vec3::zero(),
             acceleration: Vec3::zero(),
+            normal: Vec3::zero(),
             pinned: pinned,
         }
     }

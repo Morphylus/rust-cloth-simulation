@@ -12,8 +12,8 @@ async fn main() {
     let mass_value = 0.5;
     let dt = 0.02;
     let damping = 0.3;
-    let wind = Vec3::new(-1.0, 0.0, -1.0);
-    let wind_speed = 0.0;
+    let wind = Vec3::new(1.0, 0.0, 1.0);
+    let wind_speed = 10.0;
 
     let mut cloth = Cloth::new(20, 20, 1.0, 100.0);
     let mut camera = Camera::new(vec3(30.0, 30.0, 30.0), vec3(0.0, 0.0, 0.0));
@@ -38,6 +38,7 @@ fn draw_scene(cloth: &Cloth) {
 
     for mass in &cloth.masses {
         draw_sphere(mass.position.into(), 0.1, None, RED);
+        draw_line_3d(mass.position.into(), (mass.position + mass.normal).into(), YELLOW);
     }
 
     let x_vec = Vec3::new(10.0, 0.0, 0.0);
